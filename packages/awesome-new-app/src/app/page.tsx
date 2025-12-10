@@ -1,84 +1,144 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-const slogans = [
-  "Turn chats into apps",
-  "Prompt. Ship. Repeat.",
-  "Build anything from a chat",
-  "Ideas → Apps, instantly",
-  "From zero to MVP in minutes",
-  "Your cofounder in the command line",
-  "Draft, iterate, deploy",
-  "Ship faster than you can type",
-  "Design in text, deliver in code",
-  "Dream it. Prompt it. Run it.",
-  "Chat-native app building",
-  "From prompt to product",
-  "One prompt, infinite apps",
-  "Stop scaffolding. Start shipping.",
-  "Prototype at the speed of thought",
-  "Make conversations executable"
-];
+type PieceType = 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king';
+type PieceColor = 'white' | 'black';
 
-export default function Landing() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+interface Piece {
+  type: PieceType;
+  color: PieceColor;
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsVisible(false);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % slogans.length);
-        setIsVisible(true);
-      }, 400);
-    }, 2800);
+type Board = (Piece | null)[][];
 
-    return () => clearInterval(interval);
-  }, []);
+const pieceSymbols: Record<PieceColor, Record<PieceType, string>> = {
+  white: {
+    king: '♔',
+    queen: '♕',
+    rook: '♖',
+    bishop: '♗',
+    knight: '♘',
+    pawn: '♙'
+  },
+  black: {
+    king: '♚',
+    queen: '♛',
+    rook: '♜',
+    bishop: '♝',
+    knight: '♞',
+    pawn: '♟'
+  }
+};
+
+function createInitialBoard(): Board {
+  const board: Board = Array(8).fill(null).map(() => Array(8).fill(null));
+  
+  // Black pieces
+  board[0] = [
+    { type: 'rook', color: 'black' },
+    { type: 'knight', color: 'black' },
+    { type: 'bishop', color: 'black' },
+    { type: 'queen', color: 'black' },
+    { type: 'king', color: 'black' },
+    { type: 'bishop', color: 'black' },
+    { type: 'knight', color: 'black' },
+    { type: 'rook', color: 'black' }
+  ];
+  board[1] = Array(8).fill({ type: 'pawn', color: 'black' });
+  
+  // White pieces
+  board[6] = Array(8).fill({ type: 'pawn', color: 'white' });
+  board[7] = [
+    { type: 'rook', color: 'white' },
+    { type: 'knight', color: 'white' },
+    { type: 'bishop', color: 'white' },
+    { type: 'queen', color: 'white' },
+    { type: 'king', color: 'white' },
+    { type: 'bishop', color: 'white' },
+    { type: 'knight', color: 'white' },
+    { type: 'rook', color: 'white' }
+  ];
+  
+  return board;
+}
+
+export default function ChessGame() {
+  const [board, setBoard] = useState<Board>(createInitialBoard());
+  const [selectedSquare, setSelectedSquare] = useState<[number, number] | null>(null);
+  const [currentTurn, setCurrentTurn] = useState<PieceColor>('white');
+
+  const handleSquareClick = (row: number, col: number) => {
+    if (selectedSquare) {
+      const [selectedRow, selectedCol] = selectedSquare;
+      const piece = board[selectedRow][selectedCol];
+      
+      if (piece && piece.color === currentTurn) {
+        // Move piece
+        const newBoard = board.map(r => [...r]);
+        newBoard[row][col] = piece;
+        newBoard[selectedRow][selectedCol] = null;
+        setBoard(newBoard);
+        setCurrentTurn(currentTurn === 'white' ? 'black' : 'white');
+      }
+      
+      setSelectedSquare(null);
+    } else {
+      const piece = board[row][col];
+      if (piece && piece.color === currentTurn) {
+        setSelectedSquare([row, col]);
+      }
+    }
+  };
+
+  const resetGame = () => {
+    setBoard(createInitialBoard());
+    setSelectedSquare(null);
+    setCurrentTurn('white');
+  };
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-black text-white">
-      {/* Enhanced animated aurora background layers */}
-      <div className="absolute inset-0 bg-aurora-layer-1" />
-      <div className="absolute inset-0 bg-aurora-layer-2" />
-      <div className="absolute inset-0 bg-aurora-layer-3" />
-      
-      {/* Floating particles overlay */}
-      <div className="absolute inset-0 bg-particles" />
-      
-      {/* Main content - centered */}
-      <main className="relative z-10 h-full flex flex-col items-center justify-center px-6">
-        <h1 className="text-center text-[clamp(28px,6vw,64px)] font-medium tracking-tight mb-4">
-          Turn Chats into Apps
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="text-center">
+        <h1 className="text-5xl font-bold text-white mb-2">Chess</h1>
+        <p className="text-xl text-white/80 mb-6">
+          {currentTurn === 'white' ? 'White' : 'Black'}&apos;s Turn
+        </p>
         
-        {/* Rotating slogans */}
-        <div className="mt-4 h-8 md:h-10 overflow-hidden flex items-center justify-center">
-          <span
-            className={`inline-block text-center text-[clamp(18px,3vw,32px)] font-light transition-all duration-[400ms] ease-in-out ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-            }`}
-          >
-            {slogans[currentIndex]}
-          </span>
+        <div className="inline-block bg-white/10 backdrop-blur-sm p-6 rounded-2xl shadow-2xl">
+          <div className="grid grid-cols-8 gap-0 border-4 border-amber-900">
+            {board.map((row, rowIndex) =>
+              row.map((piece, colIndex) => {
+                const isLight = (rowIndex + colIndex) % 2 === 0;
+                const isSelected = selectedSquare?.[0] === rowIndex && selectedSquare?.[1] === colIndex;
+                
+                return (
+                  <button
+                    key={`${rowIndex}-${colIndex}`}
+                    onClick={() => handleSquareClick(rowIndex, colIndex)}
+                    className={`
+                      w-16 h-16 md:w-20 md:h-20 flex items-center justify-center text-5xl md:text-6xl
+                      transition-all duration-200 hover:scale-105
+                      ${isLight ? 'bg-amber-100' : 'bg-amber-800'}
+                      ${isSelected ? 'ring-4 ring-yellow-400 ring-inset' : ''}
+                    `}
+                  >
+                    {piece && pieceSymbols[piece.color][piece.type]}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
-      </main>
-      
-      {/* Start Prompting arrow pointing left - bottom left */}
-      <div className="absolute left-6 md:left-8 bottom-[5%] z-20 flex items-center gap-3 arrow-point-left">
-        <div className="flex items-center gap-2 text-white/80 font-medium text-sm md:text-base">
-          <svg 
-            className="w-5 h-5 md:w-6 md:h-6 animate-bounce-horizontal" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Start prompting</span>
-        </div>
+        
+        <button
+          onClick={resetGame}
+          className="mt-6 px-8 py-3 bg-white/20 hover:bg-white/30 text-white font-semibold rounded-lg transition-all duration-200 backdrop-blur-sm"
+        >
+          Reset Game
+        </button>
       </div>
     </div>
   );
 }
+
